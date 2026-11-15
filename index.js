@@ -1186,7 +1186,7 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
         })[0] || freeKeys[0];
       if (hasSrc(panes[key])) {
         try {
-          panes[key].view.src = 'about:blank';
+          panes[key].view.src = HOME_URL;
         } catch (e) {}
       }
       const ref = besideKey && vis.indexOf(besideKey) >= 0 ? besideKey : vis.indexOf(focusKey) >= 0 ? focusKey : vis[0];
@@ -1204,7 +1204,8 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       state.layout = insertBeside(state.layout, ref, key, side);
       state.panes[key].active = pick.id;
       renderLayout();
-            if (!noLoad) loadSite(panes[key], pick, { persist: false });
+            if (noLoad && !/^https?:/i.test(panes[key].view.getAttribute('src') || '')) panes[key].view.src = HOME_URL;
+                  if (!noLoad) loadSite(panes[key], pick, { persist: false });
       persist();
       setFocus(key);
       return panes[key];
@@ -1457,10 +1458,11 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       const st = document.createElement('style');
       st.id = 'pane-extras-style';
             st.textContent =
-        '#panesWrapper .pane .zoom-controls{position:absolute!important;left:50%!important;right:auto!important;bottom:8px!important;transform:translateX(-50%)!important;z-index:60!important;display:flex!important;flex-direction:row!important;gap:8px!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}' +
-        '#panesWrapper .pane .zoom-btn{display:flex!important;align-items:center;justify-content:center;width:32px;height:32px;box-sizing:border-box;border-radius:50%;background:rgba(0,4,50,0.82);color:#fff;border:1px solid rgba(255,255,255,0.45);font:600 20px/1 system-ui,sans-serif;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}' +
+        '#panesWrapper .pane .zoom-controls{position:absolute!important;left:auto!important;right:6px!important;bottom:6px!important;transform:none!important;z-index:60!important;display:flex!important;flex-direction:row!important;gap:3px!important;opacity:0.75!important;visibility:visible!important;pointer-events:auto!important}' +
+        '#panesWrapper .pane .zoom-btn{display:flex!important;align-items:center;justify-content:center;width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:rgba(0,4,50,0.82);color:#fff;border:1px solid rgba(255,255,255,0.45);font:600 12px/1 system-ui,sans-serif;padding:0;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}' +
         '#panesWrapper .pane .zoom-btn:active{background:#fff;color:#000432}' +
-        '#panesWrapper .pane-swap{display:inline-flex;align-items:center;justify-content:center}' +
+        '#panesWrapper .pane .zoom-btn svg{width:9px!important;height:9px!important}' +
+                '#panesWrapper .pane-swap{display:inline-flex;align-items:center;justify-content:center}' +
         '#panesWrapper .pane-swap:disabled{opacity:0.35}' +
                 '#frame.panes-only > .cr-strip,#frame.panes-only > #taskbarMain,#frame.panes-only > #bmBar,#frame.panes-only > #devBottomBar{display:none!important}' +
                 '#panesWrapper .pane .zpo.on{background:#fff;color:#000432}';
@@ -6204,7 +6206,11 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       followOrientation(true);
       renderLayout();
       ensureLoaded();
-      startGithubSync();
+      visibleKeys().forEach(function (vk) {
+              var vs = panes[vk].view.getAttribute('src') || '';
+              if (!vs || /^about:blank$/i.test(vs)) panes[vk].view.src = HOME_URL;
+            });
+            startGithubSync();
             userSwitcherInit();
     }
   init();
