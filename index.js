@@ -889,7 +889,28 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
         function visibleKeys() {
       return leavesOf(state.layout);
     }
-    var HOME_URL = 'https://888znq.github.io/TNL/';
+            var HOME_URLS = [
+          'https://888znq.github.io/TNL/',
+          'https://888znq.github.io/MIP/',
+          'https://888znq.github.io/SYS/',
+          'https://888znq.github.io/PTT/',
+          'https://888znq.github.io/MTG/',
+          'https://888znq.github.io/BCK/',
+          'https://888znq.github.io/FFT/',
+                'https://888znq.github.io/CMP/'
+          ];
+          var HOME_URL = (function () {
+      var hi = 0;
+      try {
+        hi = parseInt(localStorage.getItem('split-view:home-idx'), 10);
+      } catch (e) {}
+      if (!isFinite(hi) || hi < 0) hi = 0;
+      hi = hi % HOME_URLS.length;
+      try {
+        localStorage.setItem('split-view:home-idx', String((hi + 1) % HOME_URLS.length));
+      } catch (e2) {}
+      return HOME_URLS[hi];
+    })();
     function hasSrc(p) {
       const s = p.view.getAttribute('src');
       return !!s && s !== 'about:blank' && s !== HOME_URL;
@@ -3799,7 +3820,32 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
           syncFromPane();
         });
 
-        // Tapping a blank pane (the home background) puts the cursor in the address bar,
+        // Double tap / double click on a blank pane: switch the start page to the next one.
+                window.addEventListener('message', function (e) {
+                  const d = e.data;
+                  if (!d || typeof d !== 'object' || d.splitViewHomeNext !== true) return;
+                  const now = Date.now();
+                  if (window.__homeNextAt && now - window.__homeNextAt < 700) return;
+                  for (let i = 0; i < PANE_KEYS.length; i++) {
+                    const k = PANE_KEYS[i];
+                    if (panes[k].view.contentWindow !== e.source) continue;
+                    if (paneUrlOf(k)) break;
+                    window.__homeNextAt = now;
+                    const old = HOME_URL;
+                    HOME_URL = HOME_URLS[(HOME_URLS.indexOf(old) + 1) % HOME_URLS.length];
+                    try {
+                      localStorage.setItem('split-view:home-idx', String((HOME_URLS.indexOf(HOME_URL) + 1) % HOME_URLS.length));
+                    } catch (err) {}
+                    PANE_KEYS.forEach(function (pk) {
+                      try {
+                        if (panes[pk].view.getAttribute('src') === old) panes[pk].view.src = HOME_URL;
+                      } catch (err2) {}
+                    });
+                    break;
+                  }
+                });
+
+                // Tapping a blank pane (the home background) puts the cursor in the address bar,
         // so you can type a site straight away and it opens in the pane you tapped.
         window.addEventListener('message', function (e) {
           const d = e.data;

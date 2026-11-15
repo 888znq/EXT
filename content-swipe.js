@@ -132,14 +132,26 @@
         // Scroll / drag / long press / tap on a control → not part of a double tap.
       if (tp.moved || now - tp.t > TAP_MAX_MS || isClickable(tp.target)) { last = null; return; }
 
-      // Double tap no longer opens the apps menu.
-      last = null;
+      // Double tap on the blank page: ask index.js for the next start page.
+            if (last && now - last.t <= DOUBLE_MS && Math.hypot(tp.x - last.x, tp.y - last.y) <= DOUBLE_SLOP) {
+              last = null;
+              e.preventDefault();
+              tellParent({ splitViewHomeNext: true });
+              return;
+            }
+            last = { x: tp.x, y: tp.y, t: now };
     }, { capture: true, passive: false });
 
   document.addEventListener('touchcancel', function () {
     tap = null;
     last = null;
   }, { capture: true, passive: true });
+
+    // Double click on the blank page: ask index.js for the next start page.
+  document.addEventListener('dblclick', function (e) {
+    if (!e.isTrusted || e.button !== 0 || isClickable(e.target)) return;
+    tellParent({ splitViewHomeNext: true });
+  }, true);
 
   // ── Mouse: double-click ──
   if (ALLOW_MOUSE) {
