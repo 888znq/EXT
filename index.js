@@ -1462,7 +1462,7 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       const st = document.createElement('style');
       st.id = 'pane-extras-style';
             st.textContent =
-        '#panesWrapper .pane .zoom-controls{position:absolute!important;left:auto!important;right:6px!important;bottom:6px!important;transform:none!important;z-index:60!important;display:flex!important;flex-direction:row!important;gap:3px!important;opacity:0.75!important;visibility:visible!important;pointer-events:auto!important}' +
+        '#panesWrapper .pane .zoom-controls{position:absolute!important;left:50%!important;right:auto!important;bottom:6px!important;transform:translateX(-50%)!important;z-index:60!important;display:flex!important;flex-direction:row!important;gap:3px!important;opacity:0.75!important;visibility:visible!important;pointer-events:auto!important}' +
         '#panesWrapper .pane .zoom-btn{display:flex!important;align-items:center;justify-content:center;width:16px;height:16px;box-sizing:border-box;border-radius:50%;background:rgba(0,4,50,0.82);color:#fff;border:1px solid rgba(255,255,255,0.45);font:600 12px/1 system-ui,sans-serif;padding:0;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}' +
         '#panesWrapper .pane .zoom-btn:active{background:#fff;color:#000432}' +
         '#panesWrapper .pane .zoom-btn svg{width:9px!important;height:9px!important}' +
