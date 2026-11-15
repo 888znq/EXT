@@ -890,12 +890,7 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       return leavesOf(state.layout);
     }
             var HOME_URLS = [
-          'https://888znq.github.io/TNL/',
-          'https://888znq.github.io/MIP/',
-          'https://888znq.github.io/SYS/',
-                    'https://888znq.github.io/PTT/',
-          'https://888znq.github.io/MTG/',
-          'https://888znq.github.io/BCK/'
+                    'about:blank'
           ];
           var HOME_URL = (function () {
       var hi = 0;
@@ -1449,9 +1444,19 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       });
     }
         PANE_KEYS.forEach(function (k) {
-      wirePane(panes[k]);
-    });
-    // Keep the + / - zoom buttons of every pane on screen, above the page, at any window size.
+                        wirePane(panes[k]);
+                  });
+                  // Blank panes (about:blank) show the app color instead of white.
+                  (function blankPaneColor() {
+                    if (document.getElementById('blank-pane-style')) return;
+                    const bst = document.createElement('style');
+                    bst.id = 'blank-pane-style';
+                    bst.textContent =
+                      '#panesWrapper .pane iframe[src="about:blank"],#panesWrapper .pane iframe:not([src]){background:#000432!important;color-scheme:light!important}' +
+                      '#panesWrapper .pane:has(iframe[src="about:blank"]),#panesWrapper .pane:has(iframe:not([src])){background:#000432!important}';
+                    document.head.appendChild(bst);
+                  })();
+                  // Keep the + / - zoom buttons of every pane on screen, above the page, at any window size.
     (function paneExtrasStyle() {
       if (document.getElementById('pane-extras-style')) return;
       const st = document.createElement('style');
@@ -2906,7 +2911,27 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
         if (cur) cur.url = u;
       }
       // Icon, title and tooltip of a tab (a split shows its pane count and every site in it).
+            function tabNamesRead() {
+        try { return JSON.parse(localStorage.getItem('split-view:tab-names') || '{}') || {}; } catch (e) { return {}; }
+      }
+      function tabNameGet(tip) {
+        return tip && tip !== 'New Tab' ? tabNamesRead()[tip] || '' : '';
+      }
+      function tabNameSet(t, tip, name) {
+        t.name = name;
+        if (!tip || tip === 'New Tab') return;
+        var m = tabNamesRead();
+        if (name) m[tip] = name;
+        else delete m[tip];
+        try { localStorage.setItem('split-view:tab-names', JSON.stringify(m)); } catch (e) {}
+      }
       function tabInfo(t) {
+        var inf = tabInfoBase(t);
+        var nm = t.name || tabNameGet(inf.tip);
+        if (nm) inf.title = nm;
+        return inf;
+      }
+      function tabInfoBase(t) {
         var urls = [];
         if (t.id === activeId) {
           visibleKeys().forEach(function (k) { urls.push(paneUrlOf(k)); });
@@ -3617,8 +3642,24 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
           const x = mk('button', 'bb-tab-x', '\u00d7');
           x.type = 'button';
           x.setAttribute('aria-label', 'Close tab');
-          x.addEventListener('click', function (e) { e.stopPropagation(); closeTab(t.id); });
+                    x.addEventListener('click', function (e) { e.stopPropagation(); closeTab(t.id); });
           tab.appendChild(x);
+          const renameTab = function (e) {
+            if (e.target && e.target.closest && e.target.closest('.bb-tab-x')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const inf = tabInfoBase(t);
+            const cur = t.name || tabNameGet(inf.tip) || inf.title;
+            let nv = null;
+            try {
+              nv = window.prompt('Rename tab (leave empty to reset):', cur);
+            } catch (err) {}
+            if (nv === null) return;
+            tabNameSet(t, inf.tip, nv.trim());
+            render();
+          };
+          tab.addEventListener('dblclick', renameTab);
+          tab.addEventListener('contextmenu', renameTab);
           tab.addEventListener('click', function (e) {
                       if (e.ctrlKey || e.metaKey) {
                         toggleSel(t.id);
