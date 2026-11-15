@@ -896,8 +896,7 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
           'https://888znq.github.io/PTT/',
           'https://888znq.github.io/MTG/',
           'https://888znq.github.io/BCK/',
-          'https://888znq.github.io/FFT/',
-                'https://888znq.github.io/CMP/'
+                    'https://888znq.github.io/FFT/'
           ];
           var HOME_URL = (function () {
       var hi = 0;
