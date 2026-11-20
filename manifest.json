@@ -24,7 +24,9 @@
           "https://*.pocketoption.com/*",
           "https://qxbroker.com/*",
           "https://*.qxbroker.com/*",
-          "https://quotex.io/*",
+          "https://quotex.com/*",
+                    "https://*.quotex.com/*",
+                    "https://quotex.io/*",
           "https://*.quotex.io/*",
           "https://market-qx.pro/*",
           "https://*.market-qx.pro/*"
