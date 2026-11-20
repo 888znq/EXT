@@ -89,10 +89,57 @@
     }
     const mf = chrome.runtime.getManifest();
     o.manifestRuleResources = (mf.declarative_net_request && mf.declarative_net_request.rule_resources) || null;
-    return o;
-  }
+        return o;
+    }
 
-  window.diagJSON = async () => {
+    function diagCopyTxt(t, btn) {
+      var done = function (ok) {
+        btn.textContent = ok ? 'COPIED' : 'COPY FAILED';
+        setTimeout(function () { btn.textContent = 'COPY DIAG'; }, 1500);
+      };
+      var fb = function () {
+        var ok = false;
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = t;
+          ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+          document.body.appendChild(ta);
+          ta.select();
+          ok = document.execCommand('copy');
+          ta.remove();
+        } catch (e) {}
+        done(ok);
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(t).then(function () { done(true); }, fb);
+          return;
+        }
+      } catch (e0) {}
+      fb();
+    }
+
+    function diagMakeBtn() {
+      if (document.getElementById('diagCopyBtn')) return;
+      var b = document.createElement('button');
+      b.id = 'diagCopyBtn';
+      b.textContent = 'COPY DIAG';
+      b.style.cssText = 'position:fixed;right:6px;bottom:50px;z-index:2147483647;background:#0ff;color:#000;border:0;font:bold 10px monospace;padding:4px 8px;cursor:pointer;opacity:.85;';
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        b.textContent = 'WORKING';
+        window.diagJSON().then(
+          function (t) { diagCopyTxt(t, b); },
+          function (err) { diagCopyTxt('diag error: ' + err, b); }
+        );
+      });
+      document.body.appendChild(b);
+    }
+
+    if (document.body) diagMakeBtn();
+    else document.addEventListener('DOMContentLoaded', diagMakeBtn);
+
+    window.diagJSON = async () => {
     const reqs = Object.values(D.requests);
     const summary = {};
     reqs.forEach((r) => {
