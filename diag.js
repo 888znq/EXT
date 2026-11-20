@@ -119,12 +119,12 @@
       fb();
     }
 
-    function diagMakeBtn() {
+      function diagMakeBtn() {
       if (document.getElementById('diagCopyBtn')) return;
       var b = document.createElement('button');
       b.id = 'diagCopyBtn';
       b.textContent = 'COPY DIAG';
-      b.style.cssText = 'position:fixed;right:6px;bottom:50px;z-index:2147483647;background:#0ff;color:#000;border:0;font:bold 10px monospace;padding:4px 8px;cursor:pointer;opacity:.85;';
+      b.style.cssText = 'position:fixed;right:6px;top:4px;z-index:2147483647;background:#0ff;color:#000;border:0;font:bold 11px monospace;padding:5px 10px;cursor:pointer;opacity:.95;';
       b.addEventListener('click', function (e) {
         e.stopPropagation();
         b.textContent = 'WORKING';
@@ -136,8 +136,15 @@
       document.body.appendChild(b);
     }
 
-    if (document.body) diagMakeBtn();
+      if (document.body) diagMakeBtn();
     else document.addEventListener('DOMContentLoaded', diagMakeBtn);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.altKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        var bb = document.getElementById('diagCopyBtn') || { textContent: '' };
+        window.diagJSON().then(function (t) { diagCopyTxt(t, bb); });
+      }
+    }, true);
 
     window.diagJSON = async () => {
     const reqs = Object.values(D.requests);
