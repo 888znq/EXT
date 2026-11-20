@@ -4,8 +4,8 @@
   "version": "1.9.8",
   "description": "Split-pane view with two editable site lists. Long-press a pane to pick a site from a grid; Settings lets you add, rename, delete and reorder sites. Zoom, split position, site lists and last-opened sites sync via Firebase.",
   "permissions": [
-        "declarativeNetRequest"
-    ],
+    "declarativeNetRequest"
+  ],
   "host_permissions": [
     "https://*/*",
     "http://*/*"
@@ -16,24 +16,24 @@
   "content_scripts": [
     {
       "matches": [
-                "https://olymptrade.com/*",
-          "https://*.olymptrade.com/*",
-          "https://po.trade/*",
-          "https://*.po.trade/*",
-          "https://pocketoption.com/*",
-          "https://*.pocketoption.com/*",
-          "https://qxbroker.com/*",
-          "https://*.qxbroker.com/*",
-          "https://quotex.com/*",
-                    "https://*.quotex.com/*",
-                    "https://quotex.io/*",
-          "https://*.quotex.io/*",
-          "https://market-qx.pro/*",
-          "https://*.market-qx.pro/*"
-        ],
-        "js": [
-          "content-pair-sync.js"
-        ],
+        "https://olymptrade.com/*",
+        "https://*.olymptrade.com/*",
+        "https://po.trade/*",
+        "https://*.po.trade/*",
+        "https://pocketoption.com/*",
+        "https://*.pocketoption.com/*",
+        "https://qxbroker.com/*",
+        "https://*.qxbroker.com/*",
+        "https://quotex.com/*",
+        "https://*.quotex.com/*",
+        "https://quotex.io/*",
+        "https://*.quotex.io/*",
+        "https://market-qx.pro/*",
+        "https://*.market-qx.pro/*"
+      ],
+      "js": [
+        "content-pair-sync.js"
+      ],
       "all_frames": true,
       "run_at": "document_idle"
     },
