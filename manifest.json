@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
   "name": "EXT OS",
-    "version": "1.9.8",
+  "version": "1.9.8",
   "description": "Split-pane view with two editable site lists. Long-press a pane to pick a site from a grid; Settings lets you add, rename, delete and reorder sites. Zoom, split position, site lists and last-opened sites sync via Firebase.",
   "permissions": [
-    "declarativeNetRequest",
-    "cookies"
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://*/*",
