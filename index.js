@@ -435,11 +435,13 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
   const ZOOM_STEP = 0.01;
     const LOCAL_KEY = 'split-view:state:v2';
   const QUAD_KEY = 'split-view:quad'; // old 4-pane divider positions (only read when converting an old save)
-  const MAX_SITES = 200;
+    const MAX_SITES = 200;
   const SAVE_DELAY_MS = 800;
   const REMOTE_WAIT_MS = 2000;
   const SESSION_RULE_ID = 9001;
   const SESSION_RULE_ID_SW = 9002;
+  const SESSION_RULE_ID_PO = 9003;
+  const PO_FRAME_DOMAINS = ['po.trade', 'pocketoption.com', 'po.market'];
   const FALLBACK_MS = 3000;
   function $(id) {
     return document.getElementById(id);
@@ -5458,43 +5460,72 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       } catch (e) {}
     });
     });
-      async function installFrameRule() {
-      try {
-        if (!chrome || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.declarativeNetRequest || !chrome.declarativeNetRequest.updateSessionRules) return;
-        var tab = await chrome.tabs.getCurrent();
-        var strip = {
-          type: 'modifyHeaders',
-          responseHeaders: [
-            { header: 'X-Frame-Options', operation: 'remove' },
-            { header: 'Content-Security-Policy', operation: 'remove' },
-            { header: 'Content-Security-Policy-Report-Only', operation: 'remove' }
-          ]
-        };
-        var tabCond = tab && tab.id != null
-          ? { tabIds: [tab.id], resourceTypes: ['sub_frame'] }
-          : { initiatorDomains: [chrome.runtime.id], resourceTypes: ['sub_frame'] };
-        await chrome.declarativeNetRequest.updateSessionRules({
-          removeRuleIds: [SESSION_RULE_ID, SESSION_RULE_ID_SW],
-          addRules: [
-            {
-              id: SESSION_RULE_ID,
-              priority: 2,
-              action: strip,
-              condition: tabCond
-            },
-            {
-              id: SESSION_RULE_ID_SW,
-              priority: 2,
-              action: strip,
-              condition: { tabIds: [-1], resourceTypes: ['sub_frame', 'xmlhttprequest', 'other'] }
-            }
-          ]
+            function fixPoCookies() {
+        return new Promise(function (resolve) {
+          try {
+            if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) { resolve(); return; }
+            var done = false;
+            var timer = setTimeout(function () { if (!done) { done = true; resolve(); } }, 600);
+            chrome.runtime.sendMessage({ type: 'FIX_PO_COOKIES' }, function () {
+              void chrome.runtime.lastError;
+              if (!done) { done = true; clearTimeout(timer); resolve(); }
+            });
+          } catch (e) {
+            resolve();
+          }
         });
-      } catch (e) {
-        console.warn('[SPLIT] frame rule failed', e);
       }
-    }
-    function applyRemote(raw) {
+        async function installFrameRule() {
+        try {
+          await fixPoCookies();
+          if (!chrome || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.declarativeNetRequest || !chrome.declarativeNetRequest.updateSessionRules) return;
+          var tab = await chrome.tabs.getCurrent();
+          var strip = {
+            type: 'modifyHeaders',
+            responseHeaders: [
+              { header: 'X-Frame-Options', operation: 'remove' },
+              { header: 'Frame-Options', operation: 'remove' },
+              { header: 'Content-Security-Policy', operation: 'remove' },
+              { header: 'Content-Security-Policy-Report-Only', operation: 'remove' },
+              { header: 'Cross-Origin-Resource-Policy', operation: 'remove' },
+              { header: 'Cross-Origin-Embedder-Policy', operation: 'remove' },
+              { header: 'Cross-Origin-Opener-Policy', operation: 'remove' }
+            ]
+          };
+          var tabCond = tab && tab.id != null
+            ? { tabIds: [tab.id], resourceTypes: ['sub_frame'] }
+            : { initiatorDomains: [chrome.runtime.id], resourceTypes: ['sub_frame'] };
+          var poApiCond = tab && tab.id != null
+            ? { tabIds: [tab.id], requestDomains: PO_FRAME_DOMAINS, resourceTypes: ['sub_frame', 'xmlhttprequest', 'websocket', 'script', 'other'] }
+            : { requestDomains: PO_FRAME_DOMAINS, resourceTypes: ['sub_frame', 'xmlhttprequest', 'websocket', 'script', 'other'] };
+          await chrome.declarativeNetRequest.updateSessionRules({
+            removeRuleIds: [SESSION_RULE_ID, SESSION_RULE_ID_SW, SESSION_RULE_ID_PO],
+            addRules: [
+              {
+                id: SESSION_RULE_ID,
+                priority: 2,
+                action: strip,
+                condition: tabCond
+              },
+              {
+                id: SESSION_RULE_ID_SW,
+                priority: 2,
+                action: strip,
+                condition: { tabIds: [-1], resourceTypes: ['sub_frame', 'xmlhttprequest', 'other'] }
+              },
+              {
+                id: SESSION_RULE_ID_PO,
+                priority: 3,
+                action: strip,
+                condition: poApiCond
+              }
+            ]
+          });
+        } catch (e) {
+          console.warn('[SPLIT] frame rule failed', e);
+        }
+      }
+      function applyRemote(raw) {
     const remote = normalizeState(raw);
     if (!remote || remote.ts <= state.ts || dirty || dragging || gridDrag) return;
     const before = visibleKeys();
