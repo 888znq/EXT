@@ -6390,25 +6390,45 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
     const m = r && r.stack ? r.stack : String(r && r.message ? r.message : r);
     devErrPopup('Unhandled promise error', m);
   });
-  async function saveDirHandle(handle) {
-    return new Promise((resolve) => {
-      const req = indexedDB.open('DevWorkspaceDB', 1);
-      req.onupgradeneeded = (e) => e.target.result.createObjectStore('handles');
-      req.onsuccess = (e) => {
-        const db = e.target.result;
-        const tx = db.transaction('handles', 'readwrite');
-        tx.objectStore('handles').put(handle, 'workspaceDir');
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
+    async function saveDirHandle(handle) {
+    return new Promise((resolve, reject) => {
+      var req = indexedDB.open('DevWorkspaceDB', 1);
+      req.onupgradeneeded = (e) => {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
       };
+      req.onsuccess = (e) => {
+        var db = e.target.result;
+        try {
+          var tx = db.transaction('handles', 'readwrite');
+          tx.objectStore('handles').put(handle, 'workspaceDir');
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error || new Error('Failed to save folder handle'));
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error || new Error('Folder handle save aborted'));
+          };
+        } catch (err) {
+          db.close();
+          reject(err);
+        }
+      };
+      req.onerror = () => reject(req.error || new Error('Failed to open DevWorkspaceDB'));
     });
   }
   async function loadDirHandle() {
     return new Promise((resolve) => {
-      const req = indexedDB.open('DevWorkspaceDB', 1);
-      req.onupgradeneeded = (e) => e.target.result.createObjectStore('handles');
+      var req = indexedDB.open('DevWorkspaceDB', 1);
+      req.onupgradeneeded = (e) => {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
+      };
       req.onsuccess = (e) => {
         const db = e.target.result;
         if (!db.objectStoreNames.contains('handles')) {
@@ -6436,18 +6456,21 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
             req.onerror = () => resolve({ handle: null, granted: false });
           });
         }
-          function updateLinkButtonLabel() {
+                    function updateLinkButtonLabel() {
           const btn = $('dev-btn-link');
           if (!btn) return;
           // Line icons use currentColor, so they stay white like the other taskbar buttons
           const svgOpen = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block">';
           const ICON_FOLDER = svgOpen + '<path d="M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>';
           const ICON_RECONNECT = svgOpen + '<path d="M13.5 8a5.5 5.5 0 1 1-1.7-4"/><path d="M13.5 2.5v3h-3"/></svg>';
+          var canWrite = !!(devDirHandle && devConnected);
               btn.innerHTML = devDirHandle ? ICON_RECONNECT : ICON_FOLDER;
-            // Green = folder connected and readable, red = not connected
-            btn.classList.toggle('link-on', devConnected);
-            btn.classList.toggle('link-off', !devConnected);
-            btn.title = (devDirHandle ? 'Reconnect Folder' : 'Project Folder') + (devConnected ? ' (connected)' : ' (not connected)');
+            // Green = folder connected with read/write handle, red = not connected or read-only
+            btn.classList.toggle('link-on', canWrite);
+            btn.classList.toggle('link-off', !canWrite);
+            btn.title = devDirHandle
+              ? 'Reconnect Folder' + (devConnected ? ' (connected)' : ' (not connected)')
+              : (devConnected ? 'Project Folder (read-only: cannot save locally)' : 'Project Folder (not connected)');
             btn.setAttribute('aria-label', btn.title);
           }
           let devConnected = false;
@@ -6494,7 +6517,7 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
             updateLinkButtonLabel();
           }
         }
-  $('dev-btn-link')?.addEventListener('click', async () => {
+    $('dev-btn-link')?.addEventListener('click', async () => {
     if (devDirHandle) {
       try {
         const perm = await devDirHandle.requestPermission({ mode: 'readwrite' });
@@ -6504,34 +6527,47 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
           if (window.CloudSync) window.CloudSync.kick();
           return;
         }
-      } catch (err) {}
+      } catch (err) {
+        devLog('ERROR', 'Folder reconnect failed: ' + ((err && err.message) || err));
+      }
     }
     if ('showDirectoryPicker' in window) {
       try {
-        devDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        var picked = await window.showDirectoryPicker({ mode: 'readwrite' });
+        devDirHandle = picked;
         await saveDirHandle(devDirHandle);
         await refreshWorkspaceFromDisk();
         devToast(`✅ Linked ${Object.keys(devWorkspace).length} files!`);
         if (window.CloudSync) window.CloudSync.kick();
-      } catch (e) {}
+      } catch (e) {
+        if (!e || e.name !== 'AbortError') {
+          devShowErr('Could not link local folder for read/write:\n' + ((e && e.message) || e));
+        }
+      }
     } else {
+      devShowErr(
+        'This browser has window.showDirectoryPicker disabled, so the fallback folder picker is READ-ONLY and cannot save patches locally.\n\n' +
+        'Enable brave://flags/#file-system-access-api (or chrome://flags/#file-system-access-api), relaunch the browser, then click the Folder button again.'
+      );
       $folderInput?.click();
     }
   });
   $folderInput?.addEventListener('change', async (e) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    devDirHandle = null;
     devWorkspace = {};
     for (const file of files) {
-      if (file.webkitRelativePath && (file.webkitRelativePath.includes('node_modules') || file.webkitRelativePath.includes('.git'))) continue;
-            if (file.name.endsWith('.js') || file.name.endsWith('.html') || file.name.endsWith('.json') || file.name.endsWith('.css')) {
-            devWorkspace[file.name] = await file.text();
-          }
-        }
-        devConnected = true;
-        updateLinkButtonLabel();
-        devToast(`✅ Loaded ${Object.keys(devWorkspace).length} files!`);
-      });
+      var rel = file.webkitRelativePath ? file.webkitRelativePath.replace(/^[^/]+\//, '') : file.name;
+      if (/(^|\/)(node_modules|\.git|_to_delete)(\/|$)/.test(rel)) continue;
+      if (DEV_TEXT_RE.test(file.name) && file.size <= 3e6) {
+        devWorkspace[rel] = (await file.text()).replace(/\r\n/g, '\n');
+      }
+    }
+    devConnected = true;
+    updateLinkButtonLabel();
+    devToast(`⚠️ Loaded ${Object.keys(devWorkspace).length} files READ-ONLY (cannot write to disk)`, 6000);
+  });
   // ════════ DEV STATE ════════
   const DEV_SPLIT = '===' + 'SPLIT' + '===';
   const DEV_BLOCK = '===' + 'BLOCK' + '===';
@@ -7501,26 +7537,40 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
       else if (!diskOk) devToast('☁ Deleted in the cloud only: reconnect the folder to remove it here', 6000);
       return diskOk || cloudOk;
     }
-    async function savePatchedFiles() {
+        async function savePatchedFiles() {
     if (modifiedFilesToSave.size === 0) return;
     let savedCount = 0;
     let cloudOnly = 0;
+    var writeErrors = [];
+    var hasWritePerm = false;
+    if (devDirHandle) {
+      try {
+        hasWritePerm = (await devDirHandle.queryPermission({ mode: 'readwrite' })) === 'granted';
+      } catch (e) {
+        hasWritePerm = false;
+      }
+      if (!hasWritePerm) {
+        devConnected = false;
+        updateLinkButtonLabel();
+      }
+    }
     for (const filename of modifiedFilesToSave) {
             const content = devWorkspace[filename];
       if (content === undefined) { await devRemoveFile(filename); savedCount++; continue; }
-      if (content) {
+      if (typeof content === 'string') {
         let cloudOk = false;
         if (window.CloudSync) {
           try { cloudOk = await window.CloudSync.push(filename, content); } catch (e) { cloudOk = false; }
         }
         let directWriteSuccess = false;
-        if (devDirHandle) {
+        if (devDirHandle && hasWritePerm) {
           try {
             await devWriteFile(filename, content);
             savedCount++;
             directWriteSuccess = true;
           } catch (e) {
             console.warn('Direct write failed', e);
+            writeErrors.push(filename + ': ' + ((e && e.message) || e));
           }
         }
         if (!directWriteSuccess && cloudOk) {
@@ -7543,10 +7593,16 @@ Part tags: sections are cut at comment lines made of box-drawing characters arou
         const needsExtReload = Array.from(modifiedFilesToSave).some(function (f) {
       return f === 'background.js' || f === 'manifest.json' || f === 'rules.json' || /^content-.*\.js$/.test(f);
     });
-    devLog('PATCH', 'Saved ' + savedCount + ' file(s): ' + Array.from(modifiedFilesToSave).join(', ') + ' | full extension reload: ' + needsExtReload);
+    devLog('PATCH', 'Saved ' + savedCount + ' file(s): ' + Array.from(modifiedFilesToSave).join(', ') + ' | local: ' + (savedCount - cloudOnly) + ' | cloudOnly: ' + cloudOnly + ' | full extension reload: ' + needsExtReload);
     modifiedFilesToSave.clear();
     if (cloudOnly > 0 && cloudOnly === savedCount) {
-      devToast('☁ Saved to the cloud. Folder not connected: reconnect it to apply the files here.', 6000);
+      var reason = !('showDirectoryPicker' in window)
+        ? 'This browser has window.showDirectoryPicker disabled (read-only folder mode). Enable brave://flags/#file-system-access-api (or chrome://flags/#file-system-access-api), relaunch, then click the Folder button to link your extension folder.'
+        : writeErrors.length
+          ? 'Local disk write failed:\n' + writeErrors.join('\n')
+          : 'Local project folder is not connected with read/write permission. Click the Folder button and grant Edit files permission so patches write locally.';
+      devShowErr('Saved to CloudSync ONLY (NOT written to local disk).\n\n' + reason);
+      devToast('☁ Saved to cloud ONLY (not written locally)', 6000);
       return;
     }
     try { sessionStorage.setItem('split-view:dev-pending', JSON.stringify({ t: Date.now() })); } catch (e) {}
