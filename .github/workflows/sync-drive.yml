@@ -26,23 +26,23 @@ jobs:
             const fs = require("fs");
 
             const TRACKED = [
-              { path: "manifest.json",        drive: "EXTOS_manifest.json.txt" },
-              { path: "index.js",             drive: "EXTOS_index.js.txt" },
-              { path: "index.html",           drive: "EXTOS_index.html.txt" },
-              { path: "index_2.html",         drive: "EXTOS_index_2.html.txt" },
-              { path: "background.js",        drive: "EXTOS_background.js.txt" },
-              { path: "sync.js",              drive: "EXTOS_sync.js.txt" },
-              { path: "cloud-sync.js",        drive: "EXTOS_cloud-sync.js.txt" },
-              { path: "theme.js",             drive: "EXTOS_theme.js.txt" },
-              { path: "firebase-config.js",   drive: "EXTOS_firebase-config.js.txt" },
-              { path: "rules.json",           drive: "EXTOS_rules.json.txt" },
-              { path: "pane-popup.js",        drive: "EXTOS_pane-popup.js.txt" },
-              { path: "pane-popup_js.js",     drive: "EXTOS_pane-popup_js.js.txt" },
-              { path: "content-swipe.js",     drive: "EXTOS_content-swipe.js.txt" },
-              { path: "content-po-bridge.js", drive: "EXTOS_content-po-bridge.js.txt" },
-              { path: "content-po-auth.js",   drive: "EXTOS_content-po-auth.js.txt" },
-              { path: "content-pair-sync.js", drive: "EXTOS_content-pair-sync.js.txt" },
-              { path: "content-ai.js",        drive: "EXTOS_content-ai.js.txt" }
+              { path: "manifest.json",        drive: "EXT_manifest.json.txt" },
+              { path: "index.js",             drive: "EXT_index.js.txt" },
+              { path: "index.html",           drive: "EXT_index.html.txt" },
+              { path: "index_2.html",         drive: "EXT_index_2.html.txt" },
+              { path: "background.js",        drive: "EXT_background.js.txt" },
+              { path: "sync.js",              drive: "EXT_sync.js.txt" },
+              { path: "cloud-sync.js",        drive: "EXT_cloud-sync.js.txt" },
+              { path: "theme.js",             drive: "EXT_theme.js.txt" },
+              { path: "firebase-config.js",   drive: "EXT_firebase-config.js.txt" },
+              { path: "rules.json",           drive: "EXT_rules.json.txt" },
+              { path: "pane-popup.js",        drive: "EXT_pane-popup.js.txt" },
+              { path: "pane-popup_js.js",     drive: "EXT_pane-popup_js.js.txt" },
+              { path: "content-swipe.js",     drive: "EXT_content-swipe.js.txt" },
+              { path: "content-po-bridge.js", drive: "EXT_content-po-bridge.js.txt" },
+              { path: "content-po-auth.js",   drive: "EXT_content-po-auth.js.txt" },
+              { path: "content-pair-sync.js", drive: "EXT_content-pair-sync.js.txt" },
+              { path: "content-ai.js",        drive: "EXT_content-ai.js.txt" }
             ];
 
             const files = [];
@@ -64,7 +64,7 @@ jobs:
               manifestLines.push("- " + f.path + " -> " + f.drive + " (" + lines + " lines, " + content.length + " chars)");
             }
 
-            files.unshift({ name: "EXTOS_INDEX.txt", content: manifestLines.join("\n") + "\n" });
+            files.unshift({ name: "EXT_INDEX.txt", content: manifestLines.join("\n") + "\n" });
 
             (async () => {
               const res = await fetch(process.env.DRIVE_SYNC_URL, {
