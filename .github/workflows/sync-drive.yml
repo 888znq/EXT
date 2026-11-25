@@ -1,0 +1,80 @@
+name: Sync Repo to Google Drive (EXTOS_LIVE)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Push files to Drive
+        env:
+          DRIVE_SYNC_URL: ${{ secrets.DRIVE_SYNC_URL }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          node -e '
+            const fs = require("fs");
+
+            const TRACKED = [
+              { path: "manifest.json",        drive: "EXTOS_manifest.json.txt" },
+              { path: "index.js",             drive: "EXTOS_index.js.txt" },
+              { path: "index.html",           drive: "EXTOS_index.html.txt" },
+              { path: "index_2.html",         drive: "EXTOS_index_2.html.txt" },
+              { path: "background.js",        drive: "EXTOS_background.js.txt" },
+              { path: "sync.js",              drive: "EXTOS_sync.js.txt" },
+              { path: "cloud-sync.js",        drive: "EXTOS_cloud-sync.js.txt" },
+              { path: "theme.js",             drive: "EXTOS_theme.js.txt" },
+              { path: "firebase-config.js",   drive: "EXTOS_firebase-config.js.txt" },
+              { path: "rules.json",           drive: "EXTOS_rules.json.txt" },
+              { path: "pane-popup.js",        drive: "EXTOS_pane-popup.js.txt" },
+              { path: "pane-popup_js.js",     drive: "EXTOS_pane-popup_js.js.txt" },
+              { path: "content-swipe.js",     drive: "EXTOS_content-swipe.js.txt" },
+              { path: "content-po-bridge.js", drive: "EXTOS_content-po-bridge.js.txt" },
+              { path: "content-po-auth.js",   drive: "EXTOS_content-po-auth.js.txt" },
+              { path: "content-pair-sync.js", drive: "EXTOS_content-pair-sync.js.txt" },
+              { path: "content-ai.js",        drive: "EXTOS_content-ai.js.txt" }
+            ];
+
+            const files = [];
+            const manifestLines = [
+              "EXTOS LIVE MANIFEST",
+              "===================",
+              "Commit: " + (process.env.COMMIT_SHA || "").slice(0, 12),
+              "Message: " + String(process.env.COMMIT_MSG || "manual sync").split("\n")[0],
+              "Synced (IST): " + new Date(Date.now() + 19800000).toISOString().replace("T", " ").slice(0, 19) + " IST",
+              "",
+              "FILES:"
+            ];
+
+            for (const f of TRACKED) {
+              if (!fs.existsSync(f.path)) continue;
+              const content = fs.readFileSync(f.path, "utf8").replace(/\r\n/g, "\n");
+              const lines = content.split("\n").length;
+              files.push({ name: f.drive, content });
+              manifestLines.push("- " + f.path + " -> " + f.drive + " (" + lines + " lines, " + content.length + " chars)");
+            }
+
+            files.unshift({ name: "EXTOS_INDEX.txt", content: manifestLines.join("\n") + "\n" });
+
+            (async () => {
+              const res = await fetch(process.env.DRIVE_SYNC_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ folder: "EXTOS_LIVE", files }),
+                redirect: "follow"
+              });
+              const txt = await res.text();
+              console.log("Drive Sync Response:", res.status, txt);
+              const j = JSON.parse(txt);
+              if (!j.ok) process.exit(1);
+            })().catch(err => {
+              console.error(err);
+              process.exit(1);
+            });
+          '
